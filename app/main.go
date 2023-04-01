@@ -7,9 +7,13 @@ import (
 	"os/exec"
 )
 
+var Debug string = "false"
+
 // Usage: your_docker.sh run <image> <command> <arg1> <arg2> ...
 func main() {
-	log.SetOutput(io.Discard)
+	if Debug != "true" {
+		log.SetOutput(io.Discard)
+	}
 	log.Println("Logs from your program will appear here!")
 
 	command := os.Args[3]
