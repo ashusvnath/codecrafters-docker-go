@@ -38,18 +38,19 @@ func main() {
 		log.Printf("Error starting command: %v", err)
 		os.Exit(1)
 	}
-	go transfer(outP, errP)
+	done := make(chan bool)
+	go transfer(outP, errP, done)
 
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf("Error waiting for command completion: %v", err)
 		os.Exit(1)
 	}
-
+	<-done
 	log.Println("Done")
 }
 
-func transfer(outP, errP io.Reader) {
+func transfer(outP, errP io.Reader, done chan<- bool) {
 	outData, _ := io.ReadAll(outP)
 	errData, _ := io.ReadAll(errP)
 	_, err := os.Stdout.Write(outData)
@@ -63,4 +64,5 @@ func transfer(outP, errP io.Reader) {
 		log.Printf("Error copying stderr command: %v", err)
 		os.Exit(1)
 	}
+	done <- true
 }
