@@ -43,8 +43,12 @@ func main() {
 
 	err = cmd.Wait()
 	if err != nil {
-		log.Printf("Error waiting for command completion: %v", err)
-		os.Exit(1)
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			log.Printf("Exit Status: %d", exiterr.ExitCode())
+			os.Exit(exiterr.ExitCode())
+		} else {
+			log.Fatalf("cmd.Wait: %v", err)
+		}
 	}
 	<-done
 	log.Println("Done")
