@@ -21,13 +21,13 @@ func main() {
 
 	cmd := exec.Command(command, args...)
 
-	outP, err := cmd.StderrPipe()
+	errP, err := cmd.StderrPipe()
 	if err != nil {
 		log.Printf("Error fetching output pipe: %v", err)
 		os.Exit(1)
 	}
 
-	errP, err := cmd.StdoutPipe()
+	outP, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Printf("Error fetching error pipe: %v", err)
 		os.Exit(1)
