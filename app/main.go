@@ -7,6 +7,13 @@ import (
 	"os/exec"
 )
 
+
+type nullWriter struct{}
+type nullReader struct{}
+
+func (nullWriter) Write(p []byte) (n int, err error) {return len(p), nil}
+func (nullReader) Read(p []byte) (n int, err error) {return len(p), nil}
+
 var Debug string = "false"
 
 // Usage: your_docker.sh run <image> <command> <arg1> <arg2> ...
@@ -32,6 +39,8 @@ func main() {
 		log.Printf("Error fetching error pipe: %v", err)
 		os.Exit(1)
 	}
+
+	cmd.Stdin = nullReader{}
 
 	err = cmd.Start()
 	if err != nil {
