@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -10,13 +9,7 @@ import (
 	"syscall"
 )
 
-type nullWriter struct{}
-type nullReader struct{}
-
-func (nullWriter) Write(p []byte) (n int, err error) { return len(p), nil }
-func (nullReader) Read(p []byte) (n int, err error)  { return len(p), nil }
-
-var Debug string = "false"
+var Debug string = "true"
 
 // Usage: your_docker.sh run <image> <command> <arg1> <arg2> ...
 func main() {
@@ -31,30 +24,31 @@ func main() {
 	dirpath, _ := os.MkdirTemp("", "test-run")
 	original_path, err := os.Open(command)
 	if err != nil {
-		fmt.Printf("Failed to open original file: %v", err)
+		log.Printf("Failed to open original file: %v", err)
 		os.Exit(1)
 	}
 	copied_path, err := os.OpenFile(filepath.Join(dirpath, "executable"), os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
-		fmt.Printf("Failed to open copy file location: %v", err)
+		log.Printf("Failed to open copy file location: %v", err)
 		os.Exit(1)
 	}
 	io.Copy(copied_path, original_path)
 	original_path.Close()
 	copied_path.Close()
-	all_args := []string{dirpath, "./executable"}
+	all_args := []string{"./executable"}
 	all_args = append(all_args, args...)
 
-	tempDir, err := os.MkdirTemp("", "sandbox")
-	if err != nil {
-		log.Fatalf("Error creating temp directory %v", err)
-	}
-	syscall.Chroot(tempDir)
+	syscall.Chroot(dirpath)
 	os.Chdir("/")
-	cmd := exec.Command("chroot", all_args...)
+	cmd := exec.Command("executable", all_args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err = cmd.Wait()
+	log.Printf("executing command %v", cmd)
+	os.Mkdir("/dev", 0755)
+	devNull, _ := os.Create("/dev/null")
+	devNull.Close()
+	err = cmd.Run()
+
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			log.Printf("Exit Status: %d", exiterr.ExitCode())
