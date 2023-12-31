@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,10 +13,10 @@ var Debug string = "true"
 
 // Usage: your_docker.sh run <image> <command> <arg1> <arg2> ...
 func main() {
-	if Debug != "true" {
-		log.SetOutput(io.Discard)
-	}
-	log.Println("Logs from your program will appear here!")
+	// if Debug != "true" {
+	// 	log.SetOutput(io.Discard)
+	// }
+	fmt.Println("fmts from your program will appear here!")
 
 	command := os.Args[3]
 	args := os.Args[4:len(os.Args)]
@@ -24,12 +24,12 @@ func main() {
 	dirpath, _ := os.MkdirTemp("", "test-run")
 	original_path, err := os.Open(command)
 	if err != nil {
-		log.Printf("Failed to open original file: %v", err)
+		fmt.Printf("Failed to open original file: %v", err)
 		os.Exit(1)
 	}
 	copied_path, err := os.OpenFile(filepath.Join(dirpath, "executable"), os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
-		log.Printf("Failed to open copy file location: %v", err)
+		fmt.Printf("Failed to open copy file location: %v", err)
 		os.Exit(1)
 	}
 	io.Copy(copied_path, original_path)
@@ -39,19 +39,19 @@ func main() {
 	syscall.Chroot(dirpath)
 	os.Chdir("/")
 	wd, _ := os.Getwd()
-	log.Printf("Current working directory %v", wd)
+	fmt.Printf("Current working directory %v\n", wd)
 	cmd := exec.Command("./executable", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	log.Printf("executing command %v", cmd)
+	fmt.Printf("executing command %v\n", cmd)
 	os.Mkdir("/dev", 0755)
 	devNull, _ := os.Create("/dev/null")
 	devNull.Close()
 	err = cmd.Run()
 
 	if err != nil {
-		log.Printf("error : %v", err)
+		fmt.Printf("error : %v", err)
 		os.Exit(cmd.ProcessState.ExitCode())
 	}
-	log.Println("Done")
+	fmt.Println("Done")
 }
