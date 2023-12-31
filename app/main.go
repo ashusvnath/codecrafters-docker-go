@@ -1,18 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
-
 
 type nullWriter struct{}
 type nullReader struct{}
 
-func (nullWriter) Write(p []byte) (n int, err error) {return len(p), nil}
-func (nullReader) Read(p []byte) (n int, err error) {return len(p), nil}
+func (nullWriter) Write(p []byte) (n int, err error) { return len(p), nil }
+func (nullReader) Read(p []byte) (n int, err error)  { return len(p), nil }
 
 var Debug string = "false"
 
@@ -26,30 +27,26 @@ func main() {
 	command := os.Args[3]
 	args := os.Args[4:len(os.Args)]
 
-	cmd := exec.Command(command, args...)
-
-	errP, err := cmd.StderrPipe()
+	dirpath, _ := os.MkdirTemp("", "test-run")
+	original_path, err := os.Open(command)
 	if err != nil {
-		log.Printf("Error fetching output pipe: %v", err)
+		fmt.Printf("Failed to open original file: %v", err)
 		os.Exit(1)
 	}
-
-	outP, err := cmd.StdoutPipe()
+	copied_path, err := os.OpenFile(filepath.Join(dirpath, "executable"), os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
-		log.Printf("Error fetching error pipe: %v", err)
+		fmt.Printf("Failed to open copy file location: %v", err)
 		os.Exit(1)
 	}
-
-	cmd.Stdin = nullReader{}
-
-	err = cmd.Start()
-	if err != nil {
-		log.Printf("Error starting command: %v", err)
-		os.Exit(1)
-	}
-	done := make(chan bool)
-	go transfer(outP, errP, done)
-
+	io.Copy(copied_path, original_path)
+	original_path.Close()
+	copied_path.Close()
+	all_args := []string{dirpath, "./executable"}
+	all_args = append(all_args, args...)
+	// fmt.Println("Args", all_args)
+	cmd := exec.Command("chroot", all_args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Wait()
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
@@ -59,23 +56,5 @@ func main() {
 			log.Fatalf("cmd.Wait: %v", err)
 		}
 	}
-	<-done
 	log.Println("Done")
-}
-
-func transfer(outP, errP io.Reader, done chan<- bool) {
-	outData, _ := io.ReadAll(outP)
-	errData, _ := io.ReadAll(errP)
-	_, err := os.Stdout.Write(outData)
-	if err != nil {
-		log.Printf("Error copying stdout command: %v", err)
-		os.Exit(1)
-	}
-
-	_, err = os.Stderr.Write(errData)
-	if err != nil {
-		log.Printf("Error copying stderr command: %v", err)
-		os.Exit(1)
-	}
-	done <- true
 }
