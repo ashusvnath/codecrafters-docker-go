@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 )
 
 type nullWriter struct{}
@@ -43,7 +44,13 @@ func main() {
 	copied_path.Close()
 	all_args := []string{dirpath, "./executable"}
 	all_args = append(all_args, args...)
-	// fmt.Println("Args", all_args)
+
+	tempDir, err := os.MkdirTemp("", "sandbox")
+	if err != nil {
+		log.Fatalf("Error creating temp directory %v", err)
+	}
+	syscall.Chroot(tempDir)
+	os.Chdir("/")
 	cmd := exec.Command("chroot", all_args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
