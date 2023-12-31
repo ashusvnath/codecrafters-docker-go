@@ -35,12 +35,12 @@ func main() {
 	io.Copy(copied_path, original_path)
 	original_path.Close()
 	copied_path.Close()
-	all_args := []string{"./executable"}
-	all_args = append(all_args, args...)
 
 	syscall.Chroot(dirpath)
 	os.Chdir("/")
-	cmd := exec.Command("executable", all_args...)
+	wd, _ := os.Getwd()
+	log.Printf("Current working directory %v", wd)
+	cmd := exec.Command("./executable", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	log.Printf("executing command %v", cmd)
@@ -50,12 +50,8 @@ func main() {
 	err = cmd.Run()
 
 	if err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			log.Printf("Exit Status: %d", exiterr.ExitCode())
-			os.Exit(exiterr.ExitCode())
-		} else {
-			log.Fatalf("cmd.Wait: %v", err)
-		}
+		log.Printf("error : %v", err)
+		os.Exit(cmd.ProcessState.ExitCode())
 	}
 	log.Println("Done")
 }
